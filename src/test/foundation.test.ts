@@ -133,3 +133,11 @@ describe("onboarding primitives", () => {
     expect(countryRoomSlug("XX")).toBe("country-xx");
   });
 });
+import { recoveryDownload } from "../components/onboarding/RecoveryCeremony";
+describe("recovery ceremony output", () => {
+  it("produces offline download content without persistence", () => {
+    const output = recoveryDownload("ada", Array(24).fill("anchor"));
+    expect(output).toContain("Account: ada");
+    expect(output).toContain("24. anchor");
+  });
+});
