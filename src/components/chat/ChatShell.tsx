@@ -16,19 +16,30 @@ export function ChatShell({ session }: { session: Session }) {
     [error, setError] = useState(""),
     [nav, setNav] = useState(false);
   useEffect(() => {
-    supabase
-      ?.from("rooms")
+    const client = supabase;
+    if (!client) return;
+    client
+      .from("rooms")
       .select("id,slug,name,topic,kind,is_private")
       .order("name")
-      .then(({ data, error }) => {
+      .then(async ({ data, error }) => {
         if (error) setError(error.message);
         else {
-          const next = (data ?? []) as Room[];
+          const base = (data ?? []) as Room[];
+          const { data: memberships } = await client
+            .from("room_members")
+            .select("room_id")
+            .eq("user_id", session.user.id);
+          const joined = new Set((memberships ?? []).map((row) => row.room_id));
+          const next = base.map((room) => ({
+            ...room,
+            is_member: joined.has(room.id),
+          }));
           setRooms(next);
           setActive(next[0] ?? null);
         }
       });
-  }, []);
+  }, [session.user.id]);
   useEffect(() => {
     const client = supabase;
     if (!client || !active) return;
@@ -106,6 +117,23 @@ export function ChatShell({ session }: { session: Session }) {
       setError(error.message);
     } else setMessages((x) => reconcileMessage(x, data as PendingMessage));
   }
+  async function toggleMembership() {
+    if (!supabase || !active || active.kind === "world") return;
+    const rpc = active.is_member ? "leave_room" : "join_public_room";
+    const { error: membershipError } = await supabase.rpc(rpc, {
+      target_room: active.id,
+    });
+    if (membershipError) return setError(membershipError.message);
+    setRooms((current) =>
+      current.map((room) =>
+        room.id === active.id ? { ...room, is_member: !room.is_member } : room,
+      ),
+    );
+    setActive((current) =>
+      current ? { ...current, is_member: !current.is_member } : current,
+    );
+  }
+
   const select = (room: Room) => {
     setActive(room);
     setNav(false);
@@ -152,6 +180,11 @@ export function ChatShell({ session }: { session: Session }) {
               {active?.topic ?? "A shared space for considered discussion."}
             </p>
           </div>
+          {active?.kind !== "world" && (
+            <button className="room-join" onClick={toggleMembership}>
+              {active?.is_member ? "Leave room" : "Join room"}
+            </button>
+          )}
           <span className="presence">● LIVE</span>
         </header>
         <div className="messages" aria-live="polite">
