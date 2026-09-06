@@ -39,3 +39,7 @@ Run with two Supabase Auth users (A and B) after applying migrations: A/B can re
 ## Final foundation audit notes
 
 `202609060006_integrity_constraints.sql` enforces a single valid room-or-DM message target through the prior target check, adds same-conversation reply validation, and makes room slug collision handling transactional. Apply all migrations in order. The security-definer functions use `search_path = public`, reject unauthenticated callers where they mutate state, and do not accept caller-selected ownership.
+
+## Ownership invariant
+
+`202609060007_owner_invariant.sql` adds a database trigger that rejects deletion or demotion of any owner row. Ownership transfer is deliberately unavailable until a dedicated transaction-safe RPC is introduced. The authoritative `create_room` contract requires an authenticated caller, validates the name/topic, serializes same-base-slug creation with a transaction advisory lock, and atomically creates exactly one initial owner membership.

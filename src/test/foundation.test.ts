@@ -108,6 +108,8 @@ import {
 describe("foundation role and message target rules", () => {
   it("protects ownership and validates exactly one destination", () => {
     expect(canChangeRole("owner", "member", "moderator")).toBe(true);
+    expect(canChangeRole("owner", "owner", "member")).toBe(false);
+    expect(canChangeRole("owner", "owner", "moderator")).toBe(false);
     expect(canChangeRole("moderator", "owner", "member")).toBe(false);
     expect(canChangeRole("member", "member", "moderator")).toBe(false);
     expect(canLeave("owner")).toBe(false);
