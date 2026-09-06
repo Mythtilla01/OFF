@@ -1,27 +1,85 @@
-import { useEffect, useState } from 'react'
-import { createRoot } from 'react-dom/client'
-import type { Session } from '@supabase/supabase-js'
-import { supabase, isSupabaseConfigured } from './integrations/supabase/client'
-import type { Message, Room } from './services/chat/types'
-import { recoveryNotice } from './services/auth/recovery'
-import './styles.css'
-
+import { useEffect, useState } from "react";
+import type { Session } from "@supabase/supabase-js";
+import { createRoot } from "react-dom/client";
+import { AuthForm } from "./components/auth/AuthForm";
+import { ChatShell } from "./components/chat/ChatShell";
+import { isSupabaseConfigured, supabase } from "./integrations/supabase/client";
+import "./styles.css";
 function Landing({ onAuth }: { onAuth: () => void }) {
-  return <main className="landing"><header><b>OFF</b><span>Open Freedom Forum</span><button onClick={onAuth}>Sign in</button></header><section className="hero"><p className="eyebrow">PRIVATE CONVERSATIONS · OPEN COMMUNITIES</p><h1>Talk freely.<br/><i>Stay deliberate.</i></h1><p className="lede">A real-time home for pseudonymous technical communities—built to collect less, not to promise the impossible.</p><button className="primary" onClick={onAuth}>Enter OFF <span>→</span></button></section><section className="principles" aria-label="Privacy principles"><article><small>01</small><h2>Pseudonymous by default</h2><p>No real-name requirement. Share only what a conversation needs.</p></article><article><small>02</small><h2>No surveillance stack</h2><p>No ads, pixels, session replay, or behavioral analytics.</p></article><article><small>03</small><h2>Open about limits</h2><p>Privacy features are described precisely—not marketed as anonymity guarantees.</p></article></section><footer>OFF / Open Freedom Forum <span>Built for thoughtful exchange.</span></footer></main>
+  return (
+    <main className="landing">
+      <header>
+        <b>OFF</b>
+        <span>Open Freedom Forum</span>
+        <button onClick={onAuth}>Sign in</button>
+      </header>
+      <section className="hero">
+        <p className="eyebrow">PRIVATE CONVERSATIONS · OPEN COMMUNITIES</p>
+        <h1>
+          Talk freely.
+          <br />
+          <i>Stay deliberate.</i>
+        </h1>
+        <p className="lede">
+          A real-time home for pseudonymous technical communities—built to
+          collect less, not to promise the impossible.
+        </p>
+        <button className="primary" onClick={onAuth}>
+          Enter OFF <span>→</span>
+        </button>
+      </section>
+      <section className="principles">
+        <article>
+          <small>01</small>
+          <h2>Pseudonymous by default</h2>
+          <p>No real-name requirement. Share only what a conversation needs.</p>
+        </article>
+        <article>
+          <small>02</small>
+          <h2>No surveillance stack</h2>
+          <p>No ads, pixels, session replay, or behavioral analytics.</p>
+        </article>
+        <article>
+          <small>03</small>
+          <h2>Open about limits</h2>
+          <p>
+            Privacy features are described precisely—not marketed as anonymity
+            guarantees.
+          </p>
+        </article>
+      </section>
+    </main>
+  );
 }
-
-function Auth({ onClose }: { onClose: () => void }) {
- const [mode,setMode]=useState<'sign_in'|'sign_up'>('sign_in'),[username,setUsername]=useState(''),[password,setPassword]=useState(''),[status,setStatus]=useState('')
- async function submit(e: React.FormEvent) { e.preventDefault(); if (!supabase) return; setStatus('Working…'); const email=`${username.trim().toLowerCase()}@off.invalid`; const result=mode==='sign_in' ? await supabase.auth.signInWithPassword({email,password}) : await supabase.auth.signUp({email,password,options:{data:{username:username.trim()}}}); setStatus(result.error?.message ?? (mode==='sign_up'?'Account created. Check confirmation settings, then sign in.':'Signed in.')) }
- return <main className="auth"><button className="back" onClick={onClose}>← Back</button><form onSubmit={submit}><b>OFF</b><p className="eyebrow">{mode==='sign_in'?'WELCOME BACK':'CREATE A PSEUDONYM'}</p><h1>{mode==='sign_in'?'Continue the conversation.':'Join with less exposure.'}</h1><label>Username<input value={username} onChange={e=>setUsername(e.target.value)} minLength={3} maxLength={32} autoComplete="username" required /></label><label>Password<input value={password} onChange={e=>setPassword(e.target.value)} type="password" minLength={12} autoComplete={mode==='sign_in'?'current-password':'new-password'} required /></label><button className="primary">{mode==='sign_in'?'Sign in':'Create account'} <span>→</span></button><button type="button" className="link" onClick={()=>setMode(mode==='sign_in'?'sign_up':'sign_in')}>{mode==='sign_in'?'Need an account? Register':'Already registered? Sign in'}</button>{status&&<p role="status" className="status">{status}</p>}<p className="fine">{recoveryNotice}</p></form></main>
+function Root() {
+  const [screen, setScreen] = useState<"landing" | "auth">("landing"),
+    [session, setSession] = useState<Session | null>(null);
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data } = supabase.auth.onAuthStateChange((_event, next) =>
+      setSession(next),
+    );
+    return () => data.subscription.unsubscribe();
+  }, []);
+  if (!isSupabaseConfigured)
+    return (
+      <main className="setup">
+        <b>OFF</b>
+        <h1>Configuration required.</h1>
+        <p>
+          Copy <code>.env.example</code> to <code>.env.local</code> and provide
+          the Supabase URL and publishable key. No service-role key belongs in
+          this app.
+        </p>
+      </main>
+    );
+  return session ? (
+    <ChatShell session={session} />
+  ) : screen === "landing" ? (
+    <Landing onAuth={() => setScreen("auth")} />
+  ) : (
+    <AuthForm onClose={() => setScreen("landing")} />
+  );
 }
-
-function Chat({ session }: { session: Session }) {
- const [rooms,setRooms]=useState<Room[]>([]),[active,setActive]=useState<Room|null>(null),[messages,setMessages]=useState<Message[]>([]),[draft,setDraft]=useState(''),[error,setError]=useState('')
- useEffect(()=>{ if(!supabase)return; supabase.from('rooms').select('id,slug,name,topic,kind,is_private').eq('is_private',false).order('name').then(({data,error})=>{if(error)setError(error.message);else{setRooms((data??[]) as Room[]);setActive((data?.[0]??null) as Room|null)}}) },[])
- useEffect(()=>{ const client=supabase; if(!client||!active)return; client.from('messages').select('id,room_id,sender_id,body,created_at,edited_at,deleted_at').eq('room_id',active.id).is('deleted_at',null).order('created_at').then(({data,error})=>{if(error)setError(error.message);else setMessages((data??[]) as Message[])}); const channel=client.channel(`room:${active.id}`).on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:`room_id=eq.${active.id}`},p=>setMessages(x=>[...x,p.new as Message])).subscribe(); return()=>{client.removeChannel(channel)} },[active])
- async function send(e:React.FormEvent){e.preventDefault();if(!supabase||!active||!draft.trim())return;const body=draft.trim();setDraft('');const optimistic:Message={id:`local-${Date.now()}`,room_id:active.id,sender_id:session.user.id,body,created_at:new Date().toISOString(),edited_at:null,deleted_at:null};setMessages(x=>[...x,optimistic]);const {error}=await supabase.from('messages').insert({room_id:active.id,sender_id:session.user.id,body});if(error){setMessages(x=>x.filter(m=>m.id!==optimistic.id));setError(error.message)}}
- return <main className="app"><aside><div className="brand">OFF <small>OPEN FREEDOM FORUM</small></div><nav><p>COMMUNITIES</p>{rooms.map(r=><button className={active?.id===r.id?'selected':''} key={r.id} onClick={()=>setActive(r)}><span>#</span>{r.name}</button>)}</nav><div className="account"><span>{session.user.user_metadata.username ?? 'member'}</span><button onClick={()=>supabase?.auth.signOut()}>Sign out</button></div></aside><section className="conversation"><header><div><p className="eyebrow">{active?.kind ?? 'ROOM'}</p><h1>{active ? `# ${active.name}`:'Loading rooms…'}</h1><p>{active?.topic ?? 'A shared space for considered discussion.'}</p></div><span className="presence">● LIVE</span></header><div className="messages" aria-live="polite">{error&&<p className="error">{error}</p>}{messages.length===0&&active&&<div className="empty">No messages yet. Start the conversation.</div>}{messages.map(m=><article key={m.id}><div className="avatar">{m.sender_id.slice(0,1).toUpperCase()}</div><div><b>{m.sender_id===session.user.id?'You':'Member'}</b><time>{new Intl.DateTimeFormat(undefined,{hour:'2-digit',minute:'2-digit'}).format(new Date(m.created_at))}</time><p>{m.body}</p></div></article>)}</div><form className="composer" onSubmit={send}><label className="sr-only" htmlFor="message">Message</label><input id="message" value={draft} onChange={e=>setDraft(e.target.value)} placeholder={active?'Write a message…':'Choose a room'} disabled={!active}/><button aria-label="Send message" disabled={!active}>↑</button></form></section><aside className="details"><p className="eyebrow">ROOM NOTES</p><h2>{active?.name ?? 'OFF'}</h2><p>{active?.topic ?? 'Select a room to see its details.'}</p><hr/><p className="eyebrow">PRIVACY</p><p>Messages are not end-to-end encrypted in this MVP. Do not share secrets.</p></aside></main>
-}
-function Root(){const [screen,setScreen]=useState<'landing'|'auth'>('landing'),[session,setSession]=useState<Session|null>(null);useEffect(()=>{if(!supabase)return;supabase.auth.getSession().then(({data})=>setSession(data.session));const {data}=supabase.auth.onAuthStateChange((_e,s)=>setSession(s));return()=>data.subscription.unsubscribe()},[]);if(!isSupabaseConfigured)return <main className="setup"><b>OFF</b><h1>Configuration required.</h1><p>Copy <code>.env.example</code> to <code>.env.local</code> and provide the Supabase URL and publishable key. No service-role key belongs in this app.</p></main>;if(session)return <Chat session={session}/>;return screen==='landing'?<Landing onAuth={()=>setScreen('auth')}/>:<Auth onClose={()=>setScreen('landing')}/>}
-createRoot(document.getElementById('root')!).render(<Root />)
+createRoot(document.getElementById("root")!).render(<Root />);
