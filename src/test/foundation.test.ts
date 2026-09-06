@@ -141,3 +141,22 @@ describe("recovery ceremony output", () => {
     expect(output).toContain("24. anchor");
   });
 });
+import { nextOnboardingStep } from "../services/onboarding/state";
+it("derives resumable onboarding steps without recovery plaintext", () => {
+  expect(
+    nextOnboardingStep({
+      recovery: false,
+      profile: false,
+      country: false,
+      interests: false,
+    }),
+  ).toBe("recovery");
+  expect(
+    nextOnboardingStep({
+      recovery: true,
+      profile: true,
+      country: true,
+      interests: true,
+    }),
+  ).toBe("complete");
+});
