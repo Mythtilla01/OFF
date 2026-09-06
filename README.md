@@ -35,3 +35,7 @@ Before release, apply all migrations to an isolated Supabase project and run the
 ## Phase 2.5 database integration plan
 
 Run with two Supabase Auth users (A and B) after applying migrations: A/B can read and post World; A discovers but cannot read/post an interest room before joining, then can after joining; B cannot discover/read/post A’s private custom room; an owner can promote/remove members, a moderator cannot alter/remove the owner or become owner, and a member cannot modify membership; unrelated users cannot select a DM thread/message; participants can; authors can edit/soft-delete only their own messages. The migration resets all listed table policies before defining this single policy set.
+
+## Final foundation audit notes
+
+`202609060006_integrity_constraints.sql` enforces a single valid room-or-DM message target through the prior target check, adds same-conversation reply validation, and makes room slug collision handling transactional. Apply all migrations in order. The security-definer functions use `search_path = public`, reject unauthenticated callers where they mutate state, and do not accept caller-selected ownership.

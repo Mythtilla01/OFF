@@ -100,3 +100,18 @@ it("returns an explicit unresolved country without trusted edge context", async 
     source: "unresolved",
   });
 });
+import {
+  canChangeRole,
+  canLeave,
+  validMessageTarget,
+} from "../services/rooms/roles";
+describe("foundation role and message target rules", () => {
+  it("protects ownership and validates exactly one destination", () => {
+    expect(canChangeRole("owner", "member", "moderator")).toBe(true);
+    expect(canChangeRole("moderator", "owner", "member")).toBe(false);
+    expect(canChangeRole("member", "member", "moderator")).toBe(false);
+    expect(canLeave("owner")).toBe(false);
+    expect(validMessageTarget("room", null)).toBe(true);
+    expect(validMessageTarget("room", "thread")).toBe(false);
+  });
+});
