@@ -117,3 +117,19 @@ describe("foundation role and message target rules", () => {
     expect(validMessageTarget("room", "thread")).toBe(false);
   });
 });
+import { generateRecoveryPhrase } from "../services/auth/recovery";
+import {
+  countryRoomSlug,
+  validInterestSelection,
+} from "../services/onboarding/interests";
+describe("onboarding primitives", () => {
+  it("generates a 24-word in-memory phrase", () => {
+    expect(generateRecoveryPhrase()).toHaveLength(24);
+  });
+  it("validates interests and country slugs", () => {
+    expect(validInterestSelection(["linux", "ai", "linux"])).toBe(true);
+    expect(validInterestSelection(["secret"])).toBe(false);
+    expect(countryRoomSlug("IN")).toBe("country-in");
+    expect(countryRoomSlug("XX")).toBe("country-xx");
+  });
+});
