@@ -31,3 +31,7 @@ Landing, password authentication, pseudonymous profile trigger, seeded public ro
 ## Supabase RLS integration verification
 
 Before release, apply all migrations to an isolated Supabase project and run these role-based checks with two authenticated test users: a non-member cannot select or insert private-room messages; an interest/custom-room visitor can discover but cannot post until joining; a member insert cannot set `role` to moderator/owner; a member cannot update membership roles; a sender cannot update/delete another sender's message; and a DM participant cannot access a thread they do not participate in. These are database integration checks and are not represented as browser unit tests.
+
+## Phase 2.5 database integration plan
+
+Run with two Supabase Auth users (A and B) after applying migrations: A/B can read and post World; A discovers but cannot read/post an interest room before joining, then can after joining; B cannot discover/read/post A’s private custom room; an owner can promote/remove members, a moderator cannot alter/remove the owner or become owner, and a member cannot modify membership; unrelated users cannot select a DM thread/message; participants can; authors can edit/soft-delete only their own messages. The migration resets all listed table policies before defining this single policy set.
