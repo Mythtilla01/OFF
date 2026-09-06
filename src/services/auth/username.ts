@@ -1,4 +1,5 @@
-export const usernamePattern = /^[a-zA-Z0-9_]{3,32}$/;
+export const usernamePattern = /^[a-z0-9_]{3,32}$/;
+export function canonicalizeUsername(username: string) { return username.trim().toLowerCase() }
 export function validateUsername(username: string) {
   return usernamePattern.test(username)
     ? null
@@ -6,5 +7,5 @@ export function validateUsername(username: string) {
 }
 /** Temporary Supabase Auth transport mapping. Keep internal and replaceable. */
 export function usernameToAuthEmail(username: string) {
-  return `${username.trim().toLowerCase()}@off.invalid`;
+  return `${canonicalizeUsername(username)}@off.invalid`;
 }
