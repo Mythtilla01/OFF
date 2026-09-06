@@ -27,3 +27,7 @@ Apply `supabase/migrations/202609060001_off_mvp.sql` to a new Supabase project b
 ## Current MVP surface
 
 Landing, password authentication, pseudonymous profile trigger, seeded public rooms, optimistic message sending, and Supabase Realtime receiving are implemented. The responsive conversation shell uses live database queries—not fixture chat content.
+
+## Supabase RLS integration verification
+
+Before release, apply all migrations to an isolated Supabase project and run these role-based checks with two authenticated test users: a non-member cannot select or insert private-room messages; an interest/custom-room visitor can discover but cannot post until joining; a member insert cannot set `role` to moderator/owner; a member cannot update membership roles; a sender cannot update/delete another sender's message; and a DM participant cannot access a thread they do not participate in. These are database integration checks and are not represented as browser unit tests.

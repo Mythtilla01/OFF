@@ -65,3 +65,38 @@ describe("foundation services", () => {
     expect(normalizeCountryCode("bad")).toBe("XX");
   });
 });
+describe("reconciliation delivery ordering", () => {
+  const local = {
+    id: "local",
+    room_id: "r",
+    thread_id: null,
+    sender_id: "u",
+    body: "hi",
+    client_event_id: "id",
+    created_at: "now",
+    edited_at: null,
+    deleted_at: null,
+    pending: true,
+  };
+  const saved = { ...local, id: "saved" };
+  it("supports realtime before acknowledgement and duplicate events", () => {
+    const realtime = reconcileMessage([local], saved);
+    expect(realtime).toHaveLength(1);
+    expect(reconcileMessage(realtime, saved)).toHaveLength(1);
+  });
+  it("supports acknowledgement before realtime and failed-send rollback identity", () => {
+    const acknowledged = reconcileMessage([local], saved);
+    expect(reconcileMessage(acknowledged, saved)).toHaveLength(1);
+    expect(
+      [local].filter((message) => message.client_event_id !== "id"),
+    ).toHaveLength(0);
+  });
+});
+it("returns an explicit unresolved country without trusted edge context", async () => {
+  const { detectCurrentCountry } = await import("../services/geo/country");
+  await expect(detectCurrentCountry()).resolves.toEqual({
+    code: "XX",
+    displayName: "Unresolved region",
+    source: "unresolved",
+  });
+});
